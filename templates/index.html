@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GUIA - Gestão Unificada de Integração e Acolhimento</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="/static/styles/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 </head>
@@ -197,35 +197,27 @@
     <section id="about" class="about-section">
         <div class="container">
             <div class="about-content">
-                <div class="about-text">
-                    <h2>Criado por Aprendizes, <span class="highlight">Feito para Empresas</span></h2>
-                    <p>Somos um grupo de aprendizes dedicados que identificou um problema comum nas empresas: a falta de visualização clara das tarefas e processos de onboarding.</p>
-                    <p>Desenvolvemos o projeto GUIA para transformar a gestão corporativa em uma experiência visual, intuitiva e eficiente. Acreditamos que ferramentas simples podem gerar grandes resultados.</p>
+                <div class="about-text" data-aos="fade-right">
+                    <h2>Nascido na sala de aula, <span class="highlight">desenvolvido para o mercado</span></h2>
+                    <p>O GUIA surgiu da identificação de uma dor real do mercado corporativo: a desorganização nos processos de admissão. Quando RH, TI e Gestores não se comunicam, o novo colaborador é quem sofre.</p>
+                    <p>O conceito, a regra de negócio e toda a identidade deste projeto foram idealizados e desenvolvidos de forma colaborativa.</p>
+                    
                     <div class="team-highlight">
-                        <i class="fas fa-lightbulb"></i>
-                        <p>"Nossa missão é democratizar a gestão visual para empresas de todos os tamanhos."</p>
+                        <i class="fas fa-graduation-cap"></i>
+                        <div>
+                            <p style="margin-bottom: 5px;"><strong>Projeto Final Integrador</strong></p>
+                            <p style="font-size: 0.9rem; margin-bottom: 12px;">
+                                Desenvolvido pela turma de Aprendizagem Comercial <strong>2025-09-75</strong> (SENAC-CE, polo Crato), orientados por <strong>Suzana Oliveira</strong>. A fundamentação e os dados do projeto estão em nosso 
+                                <a href="#" target="_blank" style="color: var(--primary-red); text-decoration: underline; font-weight: 600;">documento geral de pesquisa</a>.
+                            </p>
+                            <a href="https://github.com/sebastiaosoares/projeto-guia" target="_blank" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; border-width: 1px;">
+                                <i class="fab fa-github"></i> Código Aberto (Devs: Sebastião, Suyane e Renan)
+                            </a>
+                        </div>
                     </div>
                 </div>
-                <div class="about-image">
-                    <div class="team-illustration">
-                        <div class="person person-1">
-                            <div class="avatar-large">DS</div>
-                            <span>Designer</span>
-                        </div>
-                        <div class="person person-2">
-                            <div class="avatar-large">DV</div>
-                            <span>Desenvolvedor</span>
-                        </div>
-                        <div class="person person-3">
-                            <div class="avatar-large">GP</div>
-                            <span>Gestor de Projeto</span>
-                        </div>
-                        <div class="connection-line"></div>
-                        <div class="project-result">
-                            <i class="fas fa-rocket"></i>
-                            <span>GUIA</span>
-                        </div>
-                    </div>
+                <div class="about-image" data-aos="fade-left">
+                    <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Turma de alunos reunida trabalhando em projeto no computador" style="width: 100%; border-radius: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); display: block;">
                 </div>
             </div>
         </div>
@@ -238,56 +230,40 @@
                 <div class="footer-brand">
                     <div class="logo">
                         <i class="fas fa-rocket rocket-icon"></i>
-                        <span class="logo-text">GUIA<span class="logo-flow">
+                        <span class="logo-text" style="color: white;">GUIA</span>
                     </div>
-                    <p class="footer-tagline">Gestão visual feita por aprendizes para empresas inteligentes.</p>
-                    <div class="social-links">
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-linkedin"></i></a>
-                        <a href="#"><i class="fab fa-github"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                    </div>
+                    <p class="footer-tagline">Gestão Unificada de Integração e Acolhimento.</p>
+                    <p style="color: var(--gray-light); font-size: 0.85rem; margin-top: 10px;">
+                        Uma solução desenvolvida pela turma de Aprendizagem Comercial SENAC-CE Crato (2025-09-75). Fica reservado à turma o direito exclusivo do conceito. Código aberto sob Licença MIT.
+                    </p>
                 </div>
                 <div class="footer-links">
                     <div class="link-group">
-                        <h4>Produto</h4>
-                        <a href="#">Funcionalidades</a>
-                        <a href="#">API</a>
-                        <a href="#">Status</a>
+                        <h4>Acessos Rápidos</h4>
+                        <a href="/">Página Inicial</a>
+                        <a href="/plataforma/dashboard">Dashboard (Kanban)</a>
+                        <a href="/plataforma/onboarding">Onboarding (Colaborador)</a>
                     </div>
                     <div class="link-group">
-                        <h4>Empresa</h4>
-                        <a href="#">Sobre Nós</a>
-                        <a href="#">Carreiras</a>
-                        <a href="#">Blog</a>
-                        <a href="#">Contato</a>
-                    </div>
-                    <div class="link-group">
-                        <h4>Recursos</h4>
-                        <a href="#">Documentação</a>
-                        <a href="#">Tutoriais</a>
-                        <a href="#">Suporte</a>
-                        <a href="#">Comunidade</a>
-                    </div>
-                    <div class="link-group">
-                        <h4>Legal</h4>
-                        <a href="#">Privacidade</a>
-                        <a href="#">Termos</a>
-                        <a href="#">Segurança</a>
-                        <a href="#">Cookies</a>
+                        <h4>Projeto</h4>
+                        <a href="#features">A Solução</a>
+                        <a href="#how-it-works">Metodologia</a>
+                        <a href="#about">Turma SENAC</a>
+                        <a href="#" target="_blank">Documento de Pesquisa</a>
                     </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 GUIA. Desenvolvido com ❤️ por aprendizes senac. Todos os direitos reservados.</p>
+                <p>&copy; 2026 Sebastião Soares, Suyane Oliveira, Renan Lenno e Turma SENAC-CE.</p>
                 <div class="footer-bottom-links">
-                    <span>Português (BR)</span>
-                    <span>Brasil</span>
+                    <span>Crato, CE - Brasil</span>
                 </div>
             </div>
         </div>
     </footer>
 
-    <script src="scripts/main.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script src="/static/scripts/main.js"></script>
 </body>
 </html>

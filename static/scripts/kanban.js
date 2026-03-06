@@ -1,694 +1,488 @@
-// Kanban Board Functionality for TaskFlow
+/**
+ * kanban.js
+ * Gerenciamento do quadro Kanban com integração completa à API
+ */
 
 class KanbanBoard {
     constructor() {
-        this.columns = document.querySelectorAll('.kanban-column');
-        this.tasks = document.querySelectorAll('.task-card');
-        this.currentDraggedTask = null;
+        this.columns = {};
+        this.draggedCard = null;
+        this.colunas = [];
         this.init();
     }
-    
-    init() {
+
+    async init() {
+        await this.loadColunas();
         this.setupDragAndDrop();
-        this.setupTaskActions();
+        await this.loadCollaborators();
+        this.setupSearch();
         this.setupFilters();
-        this.loadTasks();
-        this.setupNewTaskModal();
     }
-    
-    setupDragAndDrop() {
-        // Make tasks draggable
-        this.tasks.forEach(task => {
-            task.setAttribute('draggable', 'true');
-            
-            task.addEventListener('dragstart', (e) => {
-                this.currentDraggedTask = task;
-                setTimeout(() => {
-                    task.style.opacity = '0.4';
-                }, 0);
-                e.dataTransfer.effectAllowed = 'move';
-            });
-            
-            task.addEventListener('dragend', () => {
-                task.style.opacity = '1';
-                this.currentDraggedTask = null;
-            });
-        });
+
+    async loadColunas() {
+        // Carregar colunas da API
+        this.colunas = await ApiService.getColunas();
         
-        // Setup column drop zones
-        this.columns.forEach(column => {
-            column.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                column.style.backgroundColor = 'rgba(255, 59, 48, 0.05)';
-            });
+        // Mapear colunas para elementos DOM
+        this.colunas.forEach(coluna => {
+            const elementId = `coluna-${coluna.id}`;
+            let columnElement = document.getElementById(elementId);
             
-            column.addEventListener('dragleave', () => {
-                column.style.backgroundColor = '';
-            });
-            
-            column.addEventListener('drop', (e) => {
-                e.preventDefault();
-                column.style.backgroundColor = '';
-                
-                if (this.currentDraggedTask) {
-                    const tasksContainer = column.querySelector('.tasks-container');
-                    tasksContainer.appendChild(this.currentDraggedTask);
-                    this.updateTaskCount(column);
-                    
-                    // Update task status based on column
-                    this.updateTaskStatus(this.currentDraggedTask, column);
-                    
-                    // Show notification
-                    this.showNotification(`Tarefa movida para: ${column.querySelector('.column-header h3').textContent}`, 'success');
-                    
-                    // Save to localStorage
-                    this.saveTasks();
-                }
-            });
-        });
-    }
-    
-    updateTaskCount(column) {
-        const countElement = column.querySelector('.column-count');
-        const tasksCount = column.querySelectorAll('.task-card').length;
-        countElement.textContent = tasksCount;
-    }
-    
-    updateTaskStatus(task, column) {
-        const columnType = column.classList[1]; // column-todo, column-progress, etc.
-        const statusMap = {
-            'column-todo': 'pending',
-            'column-progress': 'in_progress',
-            'column-review': 'in_review',
-            'column-done': 'completed'
-        };
-        
-        task.dataset.status = statusMap[columnType] || 'pending';
-        
-        // Update visual indicator
-        task.classList.remove('status-pending', 'status-progress', 'status-review', 'status-done');
-        task.classList.add(`status-${statusMap[columnType]}`);
-    }
-    
-    setupTaskActions() {
-        document.addEventListener('click', (e) => {
-            // Edit task
-            if (e.target.closest('.edit-task')) {
-                const taskCard = e.target.closest('.task-card');
-                this.openEditModal(taskCard);
+            // Se não existir, criar dinamicamente
+            if (!columnElement) {
+                columnElement = this.criarColunaDOM(coluna);
             }
             
-            // Delete task
-            if (e.target.closest('.delete-task')) {
-                const taskCard = e.target.closest('.task-card');
-                if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
-                    taskCard.remove();
-                    this.showNotification('Tarefa excluída com sucesso!', 'success');
-                    this.saveTasks();
-                    
-                    // Update column counts
-                    this.columns.forEach(column => this.updateTaskCount(column));
-                }
-            }
+            this.columns[coluna.id] = columnElement;
+        });
+    }
+
+    criarColunaDOM(coluna) {
+        const container = document.querySelector('.kanban-columns');
+        if (!container) return null;
+        
+        const columnHtml = `
+            <div class="kanban-column column-${coluna.setor_nome.toLowerCase()}" id="coluna-${coluna.id}">
+                <div class="column-header" style="border-color: ${coluna.setor_cor};">
+                    <h3>${coluna.nome}</h3>
+                    <span class="column-count">0</span>
+                </div>
+                <div class="tasks-container" data-coluna-id="${coluna.id}"></div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', columnHtml);
+        return container.querySelector(`#coluna-${coluna.id} .tasks-container`);
+    }
+
+    async loadCollaborators() {
+        try {
+            const tasks = await ApiService.getTasks();
             
-            // Complete checklist item
-            if (e.target.closest('.checklist-item input[type="checkbox"]')) {
-                const checkbox = e.target;
-                const checklistItem = checkbox.closest('.checklist-item');
-                const progressBar = checklistItem.closest('.task-card')?.querySelector('.checklist-fill');
-                
-                if (progressBar) {
-                    const totalItems = checklistItem.closest('.task-checklist')?.querySelectorAll('.checklist-item').length || 0;
-                    const checkedItems = checklistItem.closest('.task-checklist')?.querySelectorAll('.checklist-item input[type="checkbox"]:checked').length || 0;
-                    const percentage = totalItems > 0 ? (checkedItems / totalItems) * 100 : 0;
-                    
-                    progressBar.style.width = `${percentage}%`;
-                    
-                    // Update checklist summary
-                    const summary = checklistItem.closest('.task-card')?.querySelector('.checklist-summary span');
-                    if (summary) {
-                        summary.textContent = `${checkedItems}/${totalItems} concluído`;
-                    }
-                }
-                
-                this.saveTasks();
-            }
-        });
-    }
-    
-    setupFilters() {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        const searchInput = document.querySelector('.dashboard-search input');
-        
-        // Priority/Status Filters
-        filterButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const filterType = button.dataset.filter;
-                const filterValue = button.dataset.value;
-                
-                this.tasks.forEach(task => {
-                    if (filterType === 'all') {
-                        task.style.display = 'block';
-                    } else if (filterType === 'priority') {
-                        task.style.display = task.classList.contains(`priority-${filterValue}`) ? 'block' : 'none';
-                    } else if (filterType === 'status') {
-                        task.style.display = task.dataset.status === filterValue ? 'block' : 'none';
-                    }
-                });
-                
-                // Update active filter button
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
+            // Limpar todas as colunas
+            Object.values(this.columns).forEach(col => {
+                if (col) col.innerHTML = '';
             });
-        });
-        
-        // Search filter
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                
-                this.tasks.forEach(task => {
-                    const title = task.querySelector('.task-title')?.textContent.toLowerCase() || '';
-                    const description = task.querySelector('.task-description')?.textContent.toLowerCase() || '';
-                    const assignee = task.querySelector('.assignee-name')?.textContent.toLowerCase() || '';
-                    
-                    const isVisible = title.includes(searchTerm) || 
-                                      description.includes(searchTerm) || 
-                                      assignee.includes(searchTerm);
-                    
-                    task.style.display = isVisible ? 'block' : 'none';
-                });
-            });
-        }
-    }
-    
-    setupNewTaskModal() {
-        const newTaskBtn = document.querySelector('.btn-new-task');
-        const modalOverlay = document.querySelector('.task-modal-overlay');
-        const closeModalBtn = document.querySelector('.close-modal');
-        const cancelBtn = document.querySelector('.btn-cancel');
-        const saveTaskBtn = document.querySelector('.btn-save-task');
-        const taskForm = document.getElementById('taskForm');
-        
-        if (!newTaskBtn || !modalOverlay) return;
-        
-        // Open modal
-        newTaskBtn.addEventListener('click', () => {
-            modalOverlay.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+
+            // Renderizar cards
+            tasks.forEach(task => this.renderCard(task));
+            this.updateColumnCounts();
             
-            // Reset form
-            if (taskForm) {
-                taskForm.reset();
-                taskForm.dataset.mode = 'create';
-                modalOverlay.querySelector('.modal-header h3').textContent = 'Nova Tarefa';
-            }
-        });
-        
-        // Close modal
-        const closeModal = () => {
-            modalOverlay.style.display = 'none';
-            document.body.style.overflow = '';
-        };
-        
-        if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-        
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) {
-                closeModal();
-            }
-        });
-        
-        // Save task
-        if (saveTaskBtn && taskForm) {
-            saveTaskBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                if (this.validateTaskForm(taskForm)) {
-                    if (taskForm.dataset.mode === 'create') {
-                        this.createNewTask(taskForm);
-                    } else {
-                        this.updateTask(taskForm);
-                    }
-                    
-                    closeModal();
-                }
-            });
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+            showNotification('Erro ao carregar dados do servidor', 'error');
         }
     }
-    
-    validateTaskForm(form) {
-        const title = form.querySelector('#taskTitle');
-        const description = form.querySelector('#taskDescription');
+
+    renderCard(task) {
+        const card = document.createElement('div');
+        const isUrgent = task.priority === 'high';
         
-        let isValid = true;
-        
-        if (!title.value.trim()) {
-            this.showFormError(title, 'O título é obrigatório');
-            isValid = false;
-        } else {
-            this.clearFormError(title);
-        }
-        
-        if (!description.value.trim()) {
-            this.showFormError(description, 'A descrição é obrigatória');
-            isValid = false;
-        } else {
-            this.clearFormError(description);
-        }
-        
-        return isValid;
-    }
-    
-    showFormError(input, message) {
-        input.style.borderColor = '#FF3B30';
-        
-        let errorElement = input.nextElementSibling;
-        if (!errorElement?.classList.contains('form-error')) {
-            errorElement = document.createElement('div');
-            errorElement.className = 'form-error';
-            errorElement.style.color = '#FF3B30';
-            errorElement.style.fontSize = '0.85rem';
-            errorElement.style.marginTop = '5px';
-            input.parentNode.insertBefore(errorElement, input.nextSibling);
-        }
-        
-        errorElement.textContent = message;
-    }
-    
-    clearFormError(input) {
-        input.style.borderColor = '#34C759';
-        const errorElement = input.nextElementSibling;
-        if (errorElement?.classList.contains('form-error')) {
-            errorElement.remove();
-        }
-    }
-    
-    createNewTask(form) {
-        const formData = new FormData(form);
-        const taskData = {
-            id: Date.now(),
-            title: formData.get('title'),
-            description: formData.get('description'),
-            priority: formData.get('priority'),
-            department: formData.get('department'),
-            assignee: formData.get('assignee'),
-            deadline: formData.get('deadline'),
-            status: 'pending',
-            createdAt: new Date().toISOString()
-        };
-        
-        // Create task element
-        const taskElement = this.createTaskElement(taskData);
-        
-        // Add to appropriate column
-        const targetColumn = document.querySelector('.column-todo .tasks-container');
-        targetColumn.appendChild(taskElement);
-        
-        // Update column count
-        this.updateTaskCount(targetColumn.closest('.kanban-column'));
-        
-        // Show success message
-        this.showNotification('Tarefa criada com sucesso!', 'success');
-        
-        // Save to localStorage
-        this.saveTasks();
-        
-        // Reset form
-        form.reset();
-    }
-    
-    createTaskElement(taskData) {
-        const taskElement = document.createElement('div');
-        taskElement.className = `task-card ${taskData.priority}-priority`;
-        taskElement.dataset.id = taskData.id;
-        taskElement.dataset.status = taskData.status;
-        
-        const priorityLabels = {
-            'high': 'ALTA',
-            'medium': 'MÉDIA',
-            'low': 'BAIXA'
-        };
-        
-        const assigneeInitials = taskData.assignee.split(' ').map(n => n[0]).join('').toUpperCase();
-        
-        taskElement.innerHTML = `
+        card.className = `task-card ${isUrgent ? 'high-priority' : 'medium-priority'}`;
+        card.dataset.id = task.id;
+        card.dataset.taskData = JSON.stringify(task);
+        card.setAttribute('draggable', 'true');
+
+        // Iniciais para avatar
+        const initials = task.title.split(' ')
+            .map(n => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase() || 'NO';
+
+        card.innerHTML = `
             <div class="task-header">
                 <div class="task-tags">
-                    <span class="task-tag tag-priority-${taskData.priority}">
-                        ${priorityLabels[taskData.priority] || 'PRIORIDADE'}
+                    <span class="task-tag" style="background: ${isUrgent ? 'rgba(255, 59, 48, 0.1)' : '#E5E5EA'}; color: ${isUrgent ? '#FF3B30' : '#333'};">
+                        ${isUrgent ? 'URGENTE' : 'NO PRAZO'}
                     </span>
-                    <span class="task-tag tag-${taskData.department}">
-                        ${taskData.department.toUpperCase()}
+                    <span class="task-tag" style="background: #E5E5EA; color: #333;">
+                        ${task.department.toUpperCase()}
                     </span>
                 </div>
                 <div class="task-actions">
-                    <button class="task-action-btn edit-task" title="Editar">
-                        <i class="fas fa-edit"></i>
+                    <button class="task-action-btn view-task" title="Ver Detalhes">
+                        <i class="fas fa-eye"></i>
                     </button>
-                    <button class="task-action-btn delete-task" title="Excluir">
-                        <i class="fas fa-trash"></i>
+                    <button class="task-action-btn delete-task" title="Arquivar">
+                        <i class="fas fa-archive"></i>
                     </button>
                 </div>
             </div>
-            <h4 class="task-title">${taskData.title}</h4>
-            <p class="task-description">${taskData.description}</p>
+            <h4 class="task-title">${task.title}</h4>
+            <p class="task-description">${task.description}</p>
+            
+            <!-- Barra de Progresso -->
+            <div class="task-progress" style="margin: 10px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px;">
+                    <span>Progresso</span>
+                    <span>${task.progress || 0}%</span>
+                </div>
+                <div style="height: 4px; background: #F0F0F0; border-radius: 2px; overflow: hidden;">
+                    <div style="height: 100%; width: ${task.progress || 0}%; background: #34C759; border-radius: 2px;"></div>
+                </div>
+            </div>
+            
             <div class="task-footer">
                 <div class="task-assignee">
-                    <div class="assignee-avatar">${assigneeInitials}</div>
-                    <span class="assignee-name">${taskData.assignee}</span>
+                    <div class="assignee-avatar">${initials}</div>
+                    <span class="assignee-name">${task.cargo || 'Em Integração'}</span>
                 </div>
                 <div class="task-deadline">
                     <i class="far fa-calendar"></i>
-                    <span>${this.formatDate(taskData.deadline)}</span>
+                    <span>${task.deadline || 'A definir'}</span>
+                </div>
+            </div>
+        `;
+
+        // Event listeners
+        this.attachCardEvents(card, task.id);
+        
+        // Adicionar à coluna correta
+        const targetColumn = this.columns[task.status];
+        if (targetColumn) {
+            targetColumn.appendChild(card);
+        }
+    }
+
+    attachCardEvents(card, taskId) {
+        // Botão de visualizar detalhes
+        card.querySelector('.view-task')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showTaskDetails(taskId);
+        });
+
+        // Botão de arquivar
+        card.querySelector('.delete-task')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteTask(card, taskId);
+        });
+
+        // Drag events
+        card.addEventListener('dragstart', (e) => {
+            this.draggedCard = card;
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', taskId);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        card.addEventListener('dragend', () => {
+            this.draggedCard = null;
+            card.classList.remove('dragging');
+            card.style.opacity = '1';
+        });
+    }
+
+    async showTaskDetails(cardId) {
+        const detalhes = await ApiService.getCardDetalhes(cardId);
+        if (!detalhes) return;
+        
+        this.renderTaskModal(detalhes);
+    }
+
+    renderTaskModal(detalhes) {
+        // Verificar se modal já existe
+        let modal = document.getElementById('taskDetailModal');
+        if (modal) modal.remove();
+        
+        // Criar modal
+        modal = document.createElement('div');
+        modal.id = 'taskDetailModal';
+        modal.className = 'task-modal-overlay';
+        modal.style.display = 'flex';
+        
+        const card = detalhes.card;
+        const tarefas = detalhes.tarefas;
+        
+        // Agrupar tarefas por setor
+        const tarefasPorSetor = {};
+        tarefas.forEach(t => {
+            if (!tarefasPorSetor[t.setor_nome]) {
+                tarefasPorSetor[t.setor_nome] = [];
+            }
+            tarefasPorSetor[t.setor_nome].push(t);
+        });
+        
+        let tarefasHtml = '';
+        for (const [setor, lista] of Object.entries(tarefasPorSetor)) {
+            tarefasHtml += `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #666; margin-bottom: 10px;">${setor}</h4>
+                    <div class="task-list">
+            `;
+            
+            lista.forEach(tarefa => {
+                tarefasHtml += `
+                    <div class="task-item" data-tarefa-id="${tarefa.id}">
+                        <div class="task-checkbox ${tarefa.concluida ? 'checked' : ''}" 
+                             onclick="window.kanbanBoard.toggleTarefa(${tarefa.id}, ${!tarefa.concluida})">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="task-text">${tarefa.descricao}</div>
+                        <span class="task-status ${tarefa.concluida ? 'completed' : 'pending'}">
+                            ${tarefa.concluida ? 'Concluído' : 'Pendente'}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            tarefasHtml += `</div></div>`;
+        }
+        
+        modal.innerHTML = `
+            <div class="task-modal" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>${card.colaborador_nome}</h3>
+                    <button class="close-modal" onclick="document.getElementById('taskDetailModal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div>
+                            <p><strong>Cargo:</strong> ${card.cargo || 'Não informado'}</p>
+                            <p><strong>Email:</strong> ${card.email || 'Não informado'}</p>
+                        </div>
+                        <div>
+                            <p><strong>CPF:</strong> ${card.cpf || 'Não informado'}</p>
+                            <p><strong>Matrícula:</strong> ${card.matricula || 'Não informado'}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 30px;">
+                        <h4 style="margin-bottom: 15px;">Checklist de Tarefas</h4>
+                        ${tarefasHtml}
+                    </div>
+                    
+                    <div>
+                        <h4 style="margin-bottom: 15px;">Anotações do Colaborador</h4>
+                        <textarea id="anotacoesTextarea" class="form-control" rows="4" 
+                                  placeholder="Anotações pessoais (serão criptografadas)">${detalhes.anotacoes || ''}</textarea>
+                        <button class="btn-action btn-primary-action" 
+                                onclick="window.kanbanBoard.salvarAnotacoes('${card.token_acesso}')"
+                                style="margin-top: 10px;">
+                            Salvar Anotações
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
         
-        // Make draggable
-        taskElement.setAttribute('draggable', 'true');
-        this.setupTaskDragEvents(taskElement);
-        
-        return taskElement;
+        document.body.appendChild(modal);
     }
-    
-    setupTaskDragEvents(taskElement) {
-        taskElement.addEventListener('dragstart', (e) => {
-            this.currentDraggedTask = taskElement;
-            setTimeout(() => {
-                taskElement.style.opacity = '0.4';
-            }, 0);
-            e.dataTransfer.effectAllowed = 'move';
-        });
+
+    async toggleTarefa(tarefaId, concluida) {
+        const result = await ApiService.toggleTarefa(tarefaId, concluida);
         
-        taskElement.addEventListener('dragend', () => {
-            taskElement.style.opacity = '1';
-            this.currentDraggedTask = null;
-        });
+        if (result.success) {
+            // Atualizar UI
+            const checkbox = document.querySelector(`.task-item[data-tarefa-id="${tarefaId}"] .task-checkbox`);
+            const status = document.querySelector(`.task-item[data-tarefa-id="${tarefaId}"] .task-status`);
+            
+            if (checkbox) {
+                if (concluida) {
+                    checkbox.classList.add('checked');
+                    status.textContent = 'Concluído';
+                    status.className = 'task-status completed';
+                } else {
+                    checkbox.classList.remove('checked');
+                    status.textContent = 'Pendente';
+                    status.className = 'task-status pending';
+                }
+            }
+            
+            // Recarregar lista de tasks para atualizar progresso nos cards
+            this.loadCollaborators();
+        }
     }
-    
-    openEditModal(taskCard) {
-        const modalOverlay = document.querySelector('.task-modal-overlay');
-        const modal = modalOverlay.querySelector('.task-modal');
-        const form = document.getElementById('taskForm');
+
+    async salvarAnotacoes(token) {
+        const anotacao = document.getElementById('anotacoesTextarea').value;
+        const result = await ApiService.salvarAnotacao(token, anotacao);
         
-        if (!modalOverlay || !form) return;
-        
-        // Populate form with task data
-        const taskId = taskCard.dataset.id;
-        form.dataset.taskId = taskId;
-        form.dataset.mode = 'edit';
-        
-        // Get task data (in a real app, this would come from a data store)
-        const taskData = {
-            title: taskCard.querySelector('.task-title').textContent,
-            description: taskCard.querySelector('.task-description').textContent,
-            priority: taskCard.classList.contains('high-priority') ? 'high' : 
-                     taskCard.classList.contains('medium-priority') ? 'medium' : 'low',
-            department: taskCard.querySelector('.task-tag:not(.tag-priority)')?.textContent.toLowerCase().trim() || 'geral',
-            assignee: taskCard.querySelector('.assignee-name').textContent,
-            deadline: taskCard.querySelector('.task-deadline span').textContent
-        };
-        
-        // Set form values
-        form.querySelector('#taskTitle').value = taskData.title;
-        form.querySelector('#taskDescription').value = taskData.description;
-        form.querySelector('#taskPriority').value = taskData.priority;
-        form.querySelector('#taskDepartment').value = taskData.department;
-        form.querySelector('#taskAssignee').value = taskData.assignee;
-        form.querySelector('#taskDeadline').value = taskData.deadline;
-        
-        // Update modal title
-        modal.querySelector('.modal-header h3').textContent = 'Editar Tarefa';
-        
-        // Show modal
-        modalOverlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        if (result.success) {
+            showNotification('Anotações salvas com sucesso!', 'success');
+        }
     }
-    
-    updateTask(form) {
-        const taskId = form.dataset.taskId;
-        const taskCard = document.querySelector(`.task-card[data-id="${taskId}"]`);
-        
-        if (!taskCard) return;
-        
+
+    async createNewTask(form) {
         const formData = new FormData(form);
         
-        // Update task card
-        taskCard.querySelector('.task-title').textContent = formData.get('title');
-        taskCard.querySelector('.task-description').textContent = formData.get('description');
-        taskCard.querySelector('.assignee-name').textContent = formData.get('assignee');
-        taskCard.querySelector('.task-deadline span').textContent = formData.get('deadline');
+        // Construir objeto de dados
+        const tarefasIniciais = [];
         
-        // Update priority
-        taskCard.classList.remove('high-priority', 'medium-priority', 'low-priority');
-        taskCard.classList.add(`${formData.get('priority')}-priority`);
+        // Exemplo de tarefas padrão por setor (você pode personalizar)
+        const colunaInicialId = parseInt(formData.get('coluna_inicial_id') || '1');
         
-        // Update priority tag
-        const priorityTag = taskCard.querySelector('.tag-priority-high, .tag-priority-medium, .tag-priority-low');
-        if (priorityTag) {
-            priorityTag.className = `task-tag tag-priority-${formData.get('priority')}`;
-            priorityTag.textContent = formData.get('priority') === 'high' ? 'ALTA' : 
-                                     formData.get('priority') === 'medium' ? 'MÉDIA' : 'BAIXA';
+        // Adicionar algumas tarefas padrão baseadas no setor
+        if (colunaInicialId === 1) { // RH
+            tarefasIniciais.push(
+                { descricao: 'Enviar documentos pessoais', coluna_id: 1 },
+                { descricao: 'Assinar contrato de trabalho', coluna_id: 1 }
+            );
+        } else if (colunaInicialId === 3) { // TI
+            tarefasIniciais.push(
+                { descricao: 'Criar e-mail corporativo', coluna_id: 3 },
+                { descricao: 'Configurar notebook', coluna_id: 3 }
+            );
         }
         
-        // Update assignee avatar
-        const assigneeInitials = formData.get('assignee').split(' ').map(n => n[0]).join('').toUpperCase();
-        taskCard.querySelector('.assignee-avatar').textContent = assigneeInitials;
-        
-        // Show success message
-        this.showNotification('Tarefa atualizada com sucesso!', 'success');
-        
-        // Save to localStorage
-        this.saveTasks();
-    }
-    
-    formatDate(dateString) {
-        if (!dateString) return 'Sem data';
-        
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-        
-        return date.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
-    
-    showNotification(message, type = 'info') {
-        // Use main.js notification system if available
-        if (window.showNotification) {
-            window.showNotification(message, type);
-        } else {
-            // Fallback simple notification
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? '#34C759' : type === 'error' ? '#FF3B30' : '#007AFF'};
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                z-index: 10000;
-                animation: slideIn 0.3s ease;
-            `;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-            
-            // Add animations
-            if (!document.querySelector('#kanbanNotifications')) {
-                const style = document.createElement('style');
-                style.id = 'kanbanNotifications';
-                style.textContent = `
-                    @keyframes slideIn {
-                        from { transform: translateX(100%); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                    @keyframes slideOut {
-                        from { transform: translateX(0); opacity: 1; }
-                        to { transform: translateX(100%); opacity: 0; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-    }
-    
-    saveTasks() {
-        const tasks = [];
-        
-        document.querySelectorAll('.task-card').forEach(taskCard => {
-            const column = taskCard.closest('.kanban-column');
-            const status = column ? 
-                column.classList.contains('column-todo') ? 'pending' :
-                column.classList.contains('column-progress') ? 'in_progress' :
-                column.classList.contains('column-review') ? 'in_review' : 'completed' 
-                : 'pending';
-            
-            tasks.push({
-                id: taskCard.dataset.id || Date.now(),
-                title: taskCard.querySelector('.task-title')?.textContent || '',
-                description: taskCard.querySelector('.task-description')?.textContent || '',
-                priority: taskCard.classList.contains('high-priority') ? 'high' : 
-                         taskCard.classList.contains('medium-priority') ? 'medium' : 'low',
-                department: taskCard.querySelector('.task-tag:not(.tag-priority)')?.textContent || 'Geral',
-                assignee: taskCard.querySelector('.assignee-name')?.textContent || '',
-                deadline: taskCard.querySelector('.task-deadline span')?.textContent || '',
-                status: status,
-                position: Array.from(taskCard.parentNode.children).indexOf(taskCard)
-            });
-        });
-        
-        localStorage.setItem('kanbanTasks', JSON.stringify(tasks));
-    }
-    
-    loadTasks() {
-        const savedTasks = localStorage.getItem('kanbanTasks');
-        
-        if (savedTasks) {
-            const tasks = JSON.parse(savedTasks);
-            
-            // Clear existing tasks (except template/placeholder)
-            document.querySelectorAll('.task-card:not(.task-template)').forEach(task => task.remove());
-            
-            // Add saved tasks
-            tasks.forEach(task => {
-                const taskElement = this.createTaskElement(task);
-                const targetColumn = this.getColumnByStatus(task.status);
-                
-                if (targetColumn) {
-                    const tasksContainer = targetColumn.querySelector('.tasks-container');
-                    
-                    // Insert at saved position
-                    const existingTasks = tasksContainer.querySelectorAll('.task-card');
-                    if (task.position < existingTasks.length) {
-                        tasksContainer.insertBefore(taskElement, existingTasks[task.position]);
-                    } else {
-                        tasksContainer.appendChild(taskElement);
-                    }
-                    
-                    // Update task status
-                    this.updateTaskStatus(taskElement, targetColumn);
-                }
-            });
-            
-            // Update all column counts
-            this.columns.forEach(column => this.updateTaskCount(column));
-        }
-    }
-    
-    getColumnByStatus(status) {
-        const statusMap = {
-            'pending': 'column-todo',
-            'in_progress': 'column-progress',
-            'in_review': 'column-review',
-            'completed': 'column-done'
+        const newColaborador = {
+            nome: formData.get('nome'),
+            cargo: formData.get('cargo'),
+            email: formData.get('email'),
+            cpf: formData.get('cpf'),
+            matricula: formData.get('matricula'),
+            data_inicio: formData.get('data_inicio'),
+            coluna_inicial_id: colunaInicialId,
+            prioridade: formData.get('prioridade') || 'medium',
+            observacoes: formData.get('observacoes'),
+            tarefas_iniciais: tarefasIniciais,
+            criado_por: 'RH'
         };
         
-        const columnClass = statusMap[status] || 'column-todo';
-        return document.querySelector(`.${columnClass}`);
-    }
-}
-
-// Initialize Kanban Board when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.kanbanBoard = new KanbanBoard();
-    
-    // Make kanban filter function available globally
-    window.filterKanbanByDepartment = function(department) {
-        const tasks = document.querySelectorAll('.task-card');
+        const result = await ApiService.createTask(newColaborador);
         
-        tasks.forEach(task => {
-            const taskDepartment = task.querySelector('.task-tag:not(.tag-priority)')?.textContent || '';
-            const shouldShow = department === 'Todos' || 
-                             taskDepartment.toLowerCase().includes(department.toLowerCase());
-            
-            task.style.display = shouldShow ? 'block' : 'none';
-        });
-        
-        // Update active filter in sidebar
-        document.querySelectorAll('.department-list a').forEach(link => {
-            link.classList.remove('active');
-            if (link.textContent.includes(department)) {
-                link.classList.add('active');
-            }
-        });
-    };
-});
-
-// Add drag and drop touch support for mobile
-if ('ontouchstart' in window) {
-    document.addEventListener('touchstart', handleTouchStart, {passive: false});
-    document.addEventListener('touchmove', handleTouchMove, {passive: false});
-    document.addEventListener('touchend', handleTouchEnd);
-}
-
-let touchDragged = null;
-let touchStartX = 0;
-let touchStartY = 0;
-
-function handleTouchStart(e) {
-    const task = e.target.closest('.task-card');
-    if (task) {
-        touchDragged = task;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        task.style.transition = 'none';
+        if (result.success) {
+            showNotification('Colaborador adicionado com sucesso! Token copiado para área de transferência.', 'success');
+            this.loadCollaborators();
+            return true;
+        } else {
+            showNotification('Erro ao adicionar colaborador', 'error');
+            return false;
+        }
     }
-}
 
-function handleTouchMove(e) {
-    if (!touchDragged) return;
-    
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    
-    touchDragged.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-    touchDragged.style.zIndex = '1000';
-    touchDragged.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
-}
+    setupDragAndDrop() {
+        Object.keys(this.columns).forEach(colunaId => {
+            const column = this.columns[colunaId];
+            if (!column) return;
 
-function handleTouchEnd(e) {
-    if (!touchDragged) return;
-    
-    // Reset position
-    touchDragged.style.transform = '';
-    touchDragged.style.transition = 'all 0.3s ease';
-    touchDragged.style.zIndex = '';
-    touchDragged.style.boxShadow = '';
-    
-    // Find drop target (simplified version)
-    const touch = e.changedTouches[0];
-    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-    const column = elementBelow?.closest('.kanban-column');
-    
-    if (column && touchDragged.parentNode !== column.querySelector('.tasks-container')) {
-        const tasksContainer = column.querySelector('.tasks-container');
-        if (tasksContainer) {
-            tasksContainer.appendChild(touchDragged);
+            column.addEventListener('dragover', e => {
+                e.preventDefault();
+                column.style.backgroundColor = 'rgba(0, 122, 255, 0.05)';
+            });
+
+            column.addEventListener('dragleave', () => {
+                column.style.backgroundColor = '';
+            });
+
+            column.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                column.style.backgroundColor = '';
+
+                if (!this.draggedCard) return;
+                
+                const taskId = this.draggedCard.dataset.id;
+                const novaColunaId = column.dataset.colunaId;
+                
+                // Mover visualmente
+                if (this.draggedCard.parentNode !== column) {
+                    column.appendChild(this.draggedCard);
+                    
+                    // Atualizar no backend
+                    const result = await ApiService.updateTaskStatus(taskId, novaColunaId);
+                    
+                    if (result.success) {
+                        showNotification('Colaborador movido com sucesso!', 'success');
+                        this.updateColumnCounts();
+                        
+                        // Notificar próximo setor (simplificado)
+                        const colunaDestino = this.colunas.find(c => c.id == novaColunaId);
+                        if (colunaDestino) {
+                            showNotification(`Tarefas agora com: ${colunaDestino.setor_nome}`, 'info');
+                        }
+                    } else {
+                        showNotification('Erro ao mover colaborador', 'error');
+                        // Reverter movimento
+                        this.loadCollaborators();
+                    }
+                }
+            });
+        });
+    }
+
+    async deleteTask(cardElement, taskId) {
+        if (confirm('Tem certeza que deseja arquivar este colaborador do fluxo?')) {
+            const result = await ApiService.deleteTask(taskId);
             
-            // Update kanban board
-            if (window.kanbanBoard) {
-                window.kanbanBoard.updateTaskCount(column);
-                window.kanbanBoard.updateTaskStatus(touchDragged, column);
-                window.kanbanBoard.saveTasks();
+            if (result.success) {
+                cardElement.remove();
+                this.updateColumnCounts();
+                showNotification('Colaborador arquivado com sucesso!', 'success');
+            } else {
+                showNotification('Erro ao arquivar colaborador', 'error');
             }
         }
     }
-    
-    touchDragged = null;
+
+    updateColumnCounts() {
+        Object.keys(this.columns).forEach(colunaId => {
+            const column = this.columns[colunaId];
+            if (!column) return;
+            
+            const count = column.querySelectorAll('.task-card').length;
+            const header = column.closest('.kanban-column')?.querySelector('.column-count');
+            if (header) header.textContent = count;
+        });
+    }
+
+    setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) return;
+        
+        searchInput.addEventListener('input', () => {
+            const term = searchInput.value.toLowerCase();
+            
+            document.querySelectorAll('.task-card').forEach(card => {
+                const title = card.querySelector('.task-title')?.textContent.toLowerCase() || '';
+                const description = card.querySelector('.task-description')?.textContent.toLowerCase() || '';
+                const matches = title.includes(term) || description.includes(term);
+                
+                card.style.display = matches ? 'block' : 'none';
+            });
+        });
+    }
+
+    setupFilters() {
+        // Filtros por setor
+        document.querySelectorAll('.department-filter').forEach(filter => {
+            filter.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Atualizar UI dos filtros
+                document.querySelectorAll('.department-filter').forEach(f => 
+                    f.classList.remove('active'));
+                filter.classList.add('active');
+                
+                const dept = filter.dataset.department;
+                this.filterByDepartment(dept);
+            });
+        });
+    }
+
+    filterByDepartment(department) {
+        if (department === 'todos') {
+            document.querySelectorAll('.task-card').forEach(card => 
+                card.style.display = 'block');
+            return;
+        }
+        
+        document.querySelectorAll('.task-card').forEach(card => {
+            const tags = card.querySelector('.task-tags')?.textContent.toLowerCase() || '';
+            const matches = tags.includes(department.toLowerCase());
+            card.style.display = matches ? 'block' : 'none';
+        });
+    }
+
+    validateTaskForm(form) {
+        const nome = form.querySelector('#taskTitle')?.value;
+        const cargo = form.querySelector('#taskCargo')?.value;
+        return nome && nome.trim() !== '' && cargo && cargo.trim() !== '';
+    }
 }
+
+// Inicializar quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+    window.kanbanBoard = new KanbanBoard();
+});
