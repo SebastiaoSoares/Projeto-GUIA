@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GUIA - Gestão Unificada de Integração e Acolhimento</title>
-    <link rel="stylesheet" href="/static/styles/main.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+    <!-- AOS CSS para animações -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
 </head>
 <body>
     <!-- Header -->
@@ -22,7 +24,7 @@
                         <li><a href="#how-it-works">Como Funciona</a></li>
                         <li><a href="#features">Funcionalidades</a></li>
                         <li><a href="#about">Sobre Nós</a></li>
-                        <li><a href="dashboard.html" class="nav-button">Acessar Sistema</a></li>
+                        <li><a href="{{ url_for('login') }}" class="nav-button">Acessar Sistema</a></li>
                     </ul>
                 </nav>
                 <button class="mobile-menu-btn">
@@ -36,7 +38,7 @@
     <section class="hero-section">
         <div class="container">
             <div class="hero-content">
-                <div class="hero-text">
+                <div class="hero-text" data-aos="fade-right">
                     <h1 class="hero-title">Gestão Visual que <span class="highlight">Acelera</span> seu Time</h1>
                     <p class="hero-subtitle">Criado por aprendizes para empresas que buscam eficiência. Organize tarefas, otimize onboarding e aumente a produtividade com visualização intuitiva.</p>
                     <div class="hero-buttons">
@@ -56,7 +58,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="hero-image">
+                <div class="hero-image" data-aos="fade-left">
                     <div class="dashboard-preview">
                         <div class="preview-header">
                             <div class="preview-tabs">
@@ -110,27 +112,27 @@
         </div>
     </section>
 
-<!-- How It Works -->
+    <!-- How It Works -->
     <section id="how-it-works" class="how-it-works">
         <div class="container">
-            <div class="section-header">
+            <div class="section-header" data-aos="fade-up">
                 <h2>Simples, Visual, Eficiente</h2>
                 <p>Três passos para transformar a gestão da sua empresa</p>
             </div>
             <div class="steps-container">
-                <div class="step">
+                <div class="step" data-aos="fade-right">
                     <div class="step-number">1</div>
                     <h3>Crie seus Quadros</h3>
                     <p>Configure quadros visuais para cada departamento com colunas personalizadas.</p>
                 </div>
                 <div class="step-line"></div>
-                <div class="step">
+                <div class="step" data-aos="fade-up">
                     <div class="step-number">2</div>
                     <h3>Adicione Tarefas</h3>
                     <p>Inclua atividades com responsáveis, prazos, prioridades e documentos.</p>
                 </div>
                 <div class="step-line"></div>
-                <div class="step">
+                <div class="step" data-aos="fade-left">
                     <div class="step-number">3</div>
                     <h3>Acompanhe e Otimize</h3>
                     <p>Monitore o progresso visualmente e identifique oportunidades de melhoria.</p>
@@ -139,50 +141,50 @@
         </div>
     </section>
 
-        <!-- Features Section -->
+    <!-- Features Section -->
     <section id="features" class="features-section">
         <div class="container">
-            <div class="section-header">
+            <div class="section-header" data-aos="fade-up">
                 <h2>Potencialize seu Time com Visualização</h2>
                 <p>Desenvolvido por aprendizes apaixonados por resolver problemas reais das empresas</p>
             </div>
             <div class="features-grid">
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="100">
                     <div class="feature-icon" style="background-color: rgba(255, 59, 48, 0.1);">
                         <i class="fas fa-columns" style="color: #FF3B30;"></i>
                     </div>
                     <h3>Quadros por Departamento</h3>
                     <p>Organize tarefas visualmente com quadros personalizáveis para cada setor da empresa.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="200">
                     <div class="feature-icon" style="background-color: rgba(255, 149, 0, 0.1);">
                         <i class="fas fa-user-friends" style="color: #FF9500;"></i>
                     </div>
                     <h3>Onboarding Visual</h3>
                     <p>Guie novos colaboradores com checklists interativos e progresso visível.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="300">
                     <div class="feature-icon" style="background-color: rgba(52, 199, 89, 0.1);">
                         <i class="fas fa-chart-line" style="color: #34C759;"></i>
                     </div>
                     <h3>Métricas em Tempo Real</h3>
                     <p>Acompanhe produtividade e identifique gargalos com dados visuais.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="400">
                     <div class="feature-icon" style="background-color: rgba(0, 122, 255, 0.1);">
                         <i class="fas fa-sync-alt" style="color: #007AFF;"></i>
                     </div>
                     <h3>Atualizações Automáticas</h3>
                     <p>Notificações em tempo real quando tarefas são movidas ou atualizadas.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="500">
                     <div class="feature-icon" style="background-color: rgba(255, 204, 0, 0.1);">
                         <i class="fas fa-mobile-alt" style="color: #FFCC00;"></i>
                     </div>
                     <h3>Totalmente Responsivo</h3>
                     <p>Acesse de qualquer dispositivo com interface intuitiva e arrastar-e-soltar.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" data-aos="zoom-in" data-aos-delay="600">
                     <div class="feature-icon" style="background-color: rgba(175, 82, 222, 0.1);">
                         <i class="fas fa-shield-alt" style="color: #AF52DE;"></i>
                     </div>
@@ -236,13 +238,20 @@
                     <p style="color: var(--gray-light); font-size: 0.85rem; margin-top: 10px;">
                         Uma solução desenvolvida pela turma de Aprendizagem Comercial SENAC-CE Crato (2025-09-75). Fica reservado à turma o direito exclusivo do conceito. Código aberto sob Licença MIT.
                     </p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="https://github.com/sebastiaosoares/projeto-guia"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
                 </div>
                 <div class="footer-links">
                     <div class="link-group">
                         <h4>Acessos Rápidos</h4>
                         <a href="/">Página Inicial</a>
-                        <a href="/plataforma/dashboard">Dashboard (Kanban)</a>
-                        <a href="/plataforma/onboarding">Onboarding (Colaborador)</a>
+                        <a href="{{ url_for('plataforma') }}">Dashboard (Kanban)</a>
+                        <a href="{{ url_for('login') }}">Login</a>
+                        <a href="{{ url_for('cadastro') }}">Cadastro</a>
                     </div>
                     <div class="link-group">
                         <h4>Projeto</h4>
@@ -250,6 +259,13 @@
                         <a href="#how-it-works">Metodologia</a>
                         <a href="#about">Turma SENAC</a>
                         <a href="#" target="_blank">Documento de Pesquisa</a>
+                    </div>
+                    <div class="link-group">
+                        <h4>Legal</h4>
+                        <a href="#">Privacidade</a>
+                        <a href="#">Termos</a>
+                        <a href="#">Segurança</a>
+                        <a href="#">Cookies</a>
                     </div>
                 </div>
             </div>
@@ -264,6 +280,14 @@
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <script src="/static/scripts/main.js"></script>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>
+    <script>
+        // Inicializar animações AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    </script>
 </body>
 </html>
