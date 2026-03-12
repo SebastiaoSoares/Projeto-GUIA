@@ -1,139 +1,103 @@
-/**
- * onboarding.js
- * Lógica exclusiva da visão do Colaborador (O "Guia de Bolso")
- */
-
-document.addEventListener('DOMContentLoaded', async () => {
-    // Extrai o token da URL atual
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-
-    if (!token) {
-        showNotification('Token inválido ou não fornecido', 'error');
-        return;
-    }
-
-    await carregarDadosOnboarding(token);
-    setupAnotacoes(token);
+document.addEventListener('DOMContentLoaded', () => {
+    carregarTarefas();
 });
 
-async function carregarDadosOnboarding(token) {
-    const dados = await ApiService.getMeuOnboarding(token);
+async function carregarTarefas() {
+    const container = document.getElementById('tasksContainer');
     
-    if (!dados) {
-        document.getElementById('onboarding-content').innerHTML = `
-            <div class="error-state">
-                <h3>Ops! Não conseguimos carregar o seu guia.</h3>
-                <p>Verifique se o seu link está correto ou contacte o RH.</p>
-            </div>
-        `;
-        return;
-    }
-
-    // Preenche cabeçalho
-    const bemVindoEl = document.getElementById('nome-colaborador');
-    if (bemVindoEl) bemVindoEl.textContent = dados.nome;
-
-    const emailEl = document.getElementById('email-colaborador');
-    if (emailEl) emailEl.textContent = dados.email || 'Email não registado';
-
-    // Agrupar tarefas por Setor/Fase
-    const tarefasPorSetor = {};
-    dados.tarefas.forEach(t => {
-        if (!tarefasPorSetor[t.setor_nome]) {
-            tarefasPorSetor[t.setor_nome] = [];
-        }
-        tarefasPorSetor[t.setor_nome].push(t);
-    });
-
-    renderizarLinhaDoTempo(tarefasPorSetor, dados.coluna_id);
-
-    // Preenche anotações
-    const anotacoesEl = document.getElementById('minhas-anotacoes');
-    if (anotacoesEl && dados.anotacoes) {
-        anotacoesEl.value = dados.anotacoes;
-    }
-}
-
-function renderizarLinhaDoTempo(tarefasPorSetor, colunaAtualId) {
-    const container = document.getElementById('timeline-tarefas');
-    if (!container) return;
-
-    if (Object.keys(tarefasPorSetor).length === 0) {
-        container.innerHTML = '<p class="text-muted">A sua jornada está a ser preparada. Em breve as suas tarefas aparecerão aqui!</p>';
-        return;
-    }
-
-    let html = '';
-    
-    for (const [setor, lista] of Object.entries(tarefasPorSetor)) {
-        html += `
-            <div class="timeline-setor">
-                <h3 class="setor-titulo"><i class="fas fa-building"></i> Fase: ${setor}</h3>
-                <div class="tarefas-lista">
-        `;
+    try {
+        // Busca as tarefas da coluna atual do usuário logado na API
+        const response = await fetch('/api/minhas_tarefas');
+        if (!response.ok) throw new Error('Falha ao conectar com o servidor.');
         
-        lista.forEach(tarefa => {
-            const isConcluida = tarefa.concluida === 1;
-            
-            html += `
-                <div class="tarefa-item ${isConcluida ? 'concluida' : ''}" data-id="${tarefa.id}">
-                    <label class="custom-checkbox">
-                        <input type="checkbox" 
-                               ${isConcluida ? 'checked' : ''} 
-                               onchange="alternarTarefa(${tarefa.id}, this.checked)">
-                        <span class="checkmark"></span>
-                        <span class="tarefa-texto">${tarefa.descricao}</span>
-                    </label>
+        const tarefas = await response.json();
+        
+        // Se a coluna em que o card está não tem tarefas ou ele já fez tudo e não foi movido
+        if (tarefas.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Tudo Certo por Aqui!</h3>
+                    <p>Você não tem nenhuma pendência para esta etapa no momento. Aguarde as próximas orientações da equipe.</p>
                 </div>
             `;
+            return;
+        }
+
+        container.innerHTML = ''; // Limpa o loading
+        
+        // Renderiza cada tarefa recebida do banco de dados
+        tarefas.forEach(tarefa => {
+            const isConcluida = tarefa.status === 'concluida';
+            
+            const card = document.createElement('div');
+            card.className = `task-card ${isConcluida ? 'completed' : ''}`;
+            card.id = `card-${tarefa.id}`;
+            
+            card.innerHTML = `
+                <div class="checkbox-wrapper">
+                    <div class="custom-checkbox ${isConcluida ? 'checked' : ''}" 
+                         onclick="toggleTarefa(${tarefa.id}, this, document.getElementById('card-${tarefa.id}'))"
+                         id="checkbox-${tarefa.id}">
+                        <i class="fas fa-check"></i>
+                    </div>
+                </div>
+                <div class="task-text">
+                    <h3>${tarefa.titulo}</h3>
+                    ${tarefa.descricao ? `<p>${tarefa.descricao}</p>` : ''}
+                </div>
+            `;
+            container.appendChild(card);
         });
         
-        html += `</div></div>`;
+    } catch (error) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #FF3B30; padding: 30px; background: white; border-radius: 16px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                <h3>Ops! Algo deu errado.</h3>
+                <p style="color: #666;">Não conseguimos carregar suas tarefas. Verifique sua internet e recarregue a página.</p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #FF3B30; color: white; border: none; border-radius: 8px; cursor: pointer;">Tentar Novamente</button>
+            </div>
+        `;
+        console.error('Erro no Guia de Bolso:', error);
     }
-
-    container.innerHTML = html;
 }
 
-// Função global para a checkbox acionar a API
-window.alternarTarefa = async function(tarefaId, isChecked) {
-    // Reutiliza a função do api_service.js
-    const result = await ApiService.toggleTarefa(tarefaId, isChecked);
+// Função para marcar/desmarcar a tarefa
+async function toggleTarefa(taskId, checkboxElement, cardElement) {
+    // 1. Atualização Otimista da Interface (Muda a tela imediatamente para não parecer lento)
+    const isCurrentlyChecked = checkboxElement.classList.contains('checked');
+    const newStatus = isCurrentlyChecked ? 'pendente' : 'concluida';
     
-    if (result.success) {
-        const itemEl = document.querySelector(`.tarefa-item[data-id="${tarefaId}"]`);
-        if (itemEl) {
-            if (isChecked) {
-                itemEl.classList.add('concluida');
-            } else {
-                itemEl.classList.remove('concluida');
-            }
-        }
-    } else {
-        // Reverte visualmente se falhar
-        const checkbox = document.querySelector(`.tarefa-item[data-id="${tarefaId}"] input`);
-        if (checkbox) checkbox.checked = !isChecked;
-    }
-}
+    // Desativa o clique temporariamente para evitar double-click
+    checkboxElement.style.pointerEvents = 'none';
+    
+    // Troca as classes de visualização no CSS
+    checkboxElement.classList.toggle('checked');
+    cardElement.classList.toggle('completed');
 
-function setupAnotacoes(token) {
-    const btnSalvar = document.getElementById('btn-salvar-anotacoes');
-    const textarea = document.getElementById('minhas-anotacoes');
-
-    if (btnSalvar && textarea) {
-        btnSalvar.addEventListener('click', async () => {
-            const btnOriginalText = btnSalvar.innerHTML;
-            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btnSalvar.disabled = true;
-
-            const sucesso = await ApiService.salvarAnotacao(token, textarea.value);
-            
-            if (sucesso.success) {
-                showNotification('Anotações guardadas com segurança!', 'success');
-            }
-
-            btnSalvar.innerHTML = btnOriginalText;
-            btnSalvar.disabled = false;
+    try {
+        // 2. Envia a mudança para o Backend
+        const response = await fetch(`/api/atualizar_tarefa/${taskId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
         });
+
+        if (!response.ok) {
+            throw new Error('Falha ao salvar no banco de dados.');
+        }
+        
+    } catch (error) {
+        console.error(error);
+        // Se der erro de internet, desfaz a alteração visual
+        checkboxElement.classList.toggle('checked');
+        cardElement.classList.toggle('completed');
+        alert('Erro ao atualizar a tarefa. Verifique sua conexão.');
+    } finally {
+        // Reativa o clique
+        checkboxElement.style.pointerEvents = 'auto';
     }
 }

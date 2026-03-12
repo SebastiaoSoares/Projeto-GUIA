@@ -3,123 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Guia de Bolso - GUIA</title>
+    <title>Meu Guia de Bolso</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/onboarding.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+    
     <style>
-        /* Estilos adicionais para a nova estrutura baseada em API */
-        .onboarding-container {
-            padding: 120px 0 60px;
-            max-width: 1000px;
-            margin: 0 auto;
+        body { 
+            background: #F5F7FA; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0;
+            padding: 0;
+            padding-bottom: 40px;
         }
         
-        .onboarding-header { text-align: center; margin-bottom: 50px; }
-        .onboarding-header h1 { font-size: 2.8rem; margin-bottom: 15px; background: linear-gradient(135deg, #FF3B30, #FF9500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        
-        .timeline-setor {
-            background: #FFF;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-            border-left: 5px solid #FF3B30;
-            margin-bottom: 25px;
-            transition: all 0.3s ease;
+        .mobile-header { 
+            background: #FF3B30; 
+            color: white; 
+            padding: 25px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom-left-radius: 25px; 
+            border-bottom-right-radius: 25px; 
+            box-shadow: 0 4px 15px rgba(255,59,48,0.2); 
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .timeline-setor:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(255, 59, 48, 0.15); }
-        .setor-titulo { font-size: 1.4rem; margin-bottom: 20px; color: #1C1C1E; display: flex; align-items: center; gap: 10px;}
-        .setor-titulo i { color: #FF3B30; }
         
-        .tarefas-lista { background: #F8F9FA; border-radius: 8px; padding: 20px; }
+        .mobile-header h1 { font-size: 1.3rem; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         
-        .tarefa-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEE; }
-        .tarefa-item:last-child { border-bottom: none; }
-        
-        .custom-checkbox { position: relative; display: flex; align-items: center; cursor: pointer; padding-left: 35px; user-select: none; flex: 1;}
-        .custom-checkbox input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-        .checkmark { position: absolute; top: 50%; left: 0; transform: translateY(-50%); height: 24px; width: 24px; background-color: #FFF; border: 2px solid #DDD; border-radius: 6px; transition: all 0.2s; }
-        .custom-checkbox:hover input ~ .checkmark { border-color: #FF3B30; }
-        .custom-checkbox input:checked ~ .checkmark { background-color: #34C759; border-color: #34C759; }
-        .checkmark:after { content: ""; position: absolute; display: none; left: 8px; top: 4px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-        .custom-checkbox input:checked ~ .checkmark:after { display: block; }
-        .tarefa-texto { font-size: 1rem; color: #333; transition: all 0.2s; }
-        .tarefa-item.concluida .tarefa-texto { color: #999; text-decoration: line-through; }
-        
-        .anotacoes-section {
-            background: #FFF;
-            border-radius: 12px;
-            padding: 30px;
-            margin-top: 40px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        .logout-btn { 
+            color: white; 
+            text-decoration: none; 
+            font-size: 1.2rem; 
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
         }
-        .anotacoes-section textarea { width: 100%; border: 2px solid #F0F0F0; border-radius: 8px; padding: 15px; font-family: inherit; font-size: 1rem; resize: vertical; margin-bottom: 15px;}
-        .anotacoes-section textarea:focus { outline: none; border-color: #FF3B30; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
         
-        .btn-salvar { background: #FF3B30; color: #FFF; border: none; padding: 12px 25px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.3s; }
-        .btn-salvar:hover { background: #E5352B; }
+        .welcome-section { padding: 30px 20px 15px; }
+        .welcome-section h2 { font-size: 1.6rem; color: #333; margin-bottom: 8px; font-weight: 700; }
+        .welcome-section p { color: #666; font-size: 1rem; line-height: 1.5; margin: 0; }
+        .status-badge { display: inline-block; background: #E0F2FE; color: #0284C7; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; margin-top: 10px; }
         
-        .error-state { text-align: center; padding: 50px; background: #FFF; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .error-state h3 { color: #FF3B30; margin-bottom: 10px; }
+        .tasks-wrapper { padding: 0 20px; }
         
-        .back-to-dashboard { text-align: center; margin-top: 50px; }
-        .btn-dashboard { display: inline-flex; align-items: center; gap: 10px; background: #333; color: #FFF; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
-        .btn-dashboard:hover { background: #000; transform: translateY(-2px); }
+        .task-card { 
+            background: white; 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 15px; 
+            transition: all 0.3s ease; 
+            border: 1px solid #F0F0F0;
+            position: relative;
+        }
+        
+        .task-card.completed { 
+            opacity: 0.6; 
+            background: #FAFAFA;
+            transform: scale(0.98);
+        }
+        
+        .task-card.completed .task-text h3 { text-decoration: line-through; color: #999; }
+        
+        .checkbox-wrapper { padding-top: 2px; }
+        
+        .custom-checkbox { 
+            width: 26px; 
+            height: 26px; 
+            border: 2px solid #FF3B30; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            background: white;
+        }
+        
+        .custom-checkbox:active { transform: scale(0.9); }
+        .custom-checkbox.checked { background: #FF3B30; border-color: #FF3B30; }
+        .custom-checkbox i { color: white; font-size: 14px; opacity: 0; transform: scale(0.5); transition: all 0.2s; }
+        .custom-checkbox.checked i { opacity: 1; transform: scale(1); }
+        
+        .task-text { flex: 1; }
+        .task-text h3 { margin: 0 0 6px 0; font-size: 1.05rem; color: #333; line-height: 1.3; font-weight: 600; }
+        .task-text p { margin: 0 0 8px 0; font-size: 0.9rem; color: #777; line-height: 1.5; }
+        
+        /* Nova tag visual de Dica */
+        .task-hint { font-size: 0.75rem; color: #999; display: flex; align-items: center; gap: 5px; background: #F8F9FA; padding: 4px 8px; border-radius: 6px; width: fit-content; }
+        
+        .empty-state { text-align: center; padding: 50px 20px; background: white; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; color: #34C759; }
+        .empty-state h3 { color: #333; margin-bottom: 10px; font-size: 1.3rem; }
+        .empty-state p { color: #666; line-height: 1.5; font-size: 0.95rem; }
     </style>
 </head>
 <body>
-    <header class="main-header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-rocket rocket-icon"></i>
-                    <span class="logo-text">GUIA</span>
-                </div>
-                <div style="font-weight: 600; color: #333;">
-                    <i class="fas fa-user-circle" style="color: #FF3B30; margin-right: 5px;"></i> 
-                    <span id="nome-colaborador">Carregando...</span>
-                </div>
-            </div>
-        </div>
+    <header class="mobile-header">
+        <h1><i class="fas fa-compass"></i> Guia de Bolso</h1>
+        <a href="{{ url_for('logout') }}" class="logout-btn" title="Sair"><i class="fas fa-power-off"></i></a>
     </header>
 
-    <div class="onboarding-container" id="onboarding-content">
-        <div class="onboarding-header">
-            <h1>🚀 O Seu Guia de Bolso!</h1>
-            <p>Acompanhe o seu progresso de integração pelas diferentes fases e setores da empresa.</p>
-            <p id="email-colaborador" style="color: #666; font-size: 0.9rem; margin-top: 5px;"></p>
-        </div>
-        
-        <!-- A linha do tempo será injetada aqui pelo onboarding.js -->
-        <div id="timeline-tarefas">
-            <div style="text-align: center; padding: 40px; color: #999;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                <p>A carregar o seu guia de atividades...</p>
-            </div>
-        </div>
-        
-        <div class="anotacoes-section">
-            <h2 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-sticky-note" style="color: #FF9500;"></i> Minhas Anotações Privadas
-            </h2>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Use este espaço para guardar senhas temporárias, ramais, ou dúvidas para os gestores. Apenas você e o sistema seguro têm acesso.</p>
-            <textarea id="minhas-anotacoes" rows="5" placeholder="Escreva aqui as suas anotações..."></textarea>
-            <button id="btn-salvar-anotacoes" class="btn-salvar">
-                <i class="fas fa-save"></i> Guardar Anotações
-            </button>
-        </div>
-        
-        <div class="back-to-dashboard">
-            <!-- Caso tenha se perdido, pode ir para a home -->
-            <a href="{{ url_for('index') }}" class="btn-dashboard">
-                <i class="fas fa-home"></i> Voltar à Página Inicial
-            </a>
+    <section class="welcome-section">
+        <h2>Olá, {{ nome_colaborador.split(' ')[0] }}! 👋</h2>
+        <p>Acompanhe aqui o checklist do seu onboarding. Veja o que está pendente no seu processo de integração.</p>
+        <div class="status-badge"><i class="fas fa-spinner fa-spin"></i> Em andamento</div>
+    </section>
+
+    <!-- Lista de tarefas injetada pelo JavaScript -->
+    <div class="tasks-wrapper" id="tasksContainer">
+        <div style="text-align: center; color: #999; padding: 40px;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2.5rem; margin-bottom: 15px; color: #FF3B30;"></i>
+            <p>Buscando status do seu processo...</p>
         </div>
     </div>
 
-    <!-- Importa a API e a lógica específica desta página -->
-    <script src="{{ url_for('static', filename='scripts/api_service.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/onboarding.js') }}"></script>
+    <!-- Script leve modificado diretamente aqui para facilitar -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarTarefas();
+        });
+
+        async function carregarTarefas() {
+            const container = document.getElementById('tasksContainer');
+            
+            try {
+                const response = await fetch('/api/minhas_tarefas');
+                if (!response.ok) throw new Error('Falha ao conectar com o servidor.');
+                
+                const tarefas = await response.json();
+                
+                if (tarefas.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>Tudo Certo por Aqui!</h3>
+                            <p>Não há etapas pendentes para você nesta fase atual do processo. Aguarde o avanço para a próxima etapa.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = ''; 
+                
+                tarefas.forEach(tarefa => {
+                    const isConcluida = tarefa.status === 'concluida';
+                    
+                    const card = document.createElement('div');
+                    card.className = `task-card ${isConcluida ? 'completed' : ''}`;
+                    card.id = `card-${tarefa.id}`;
+                    
+                    card.innerHTML = `
+                        <div class="checkbox-wrapper">
+                            <div class="custom-checkbox ${isConcluida ? 'checked' : ''}" 
+                                 onclick="toggleTarefa(${tarefa.id}, this, document.getElementById('card-${tarefa.id}'))"
+                                 id="checkbox-${tarefa.id}">
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+                        <div class="task-text">
+                            <h3>${tarefa.titulo}</h3>
+                            ${tarefa.descricao ? `<p>${tarefa.descricao}</p>` : ''}
+                            <div class="task-hint">
+                                <i class="fas fa-info-circle"></i> O setor ou você podem marcar o check.
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #FF3B30; padding: 30px; background: white; border-radius: 16px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>Ops! Algo deu errado.</h3>
+                        <p style="color: #666;">Não conseguimos carregar o checklist. Verifique sua internet.</p>
+                        <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #FF3B30; color: white; border: none; border-radius: 8px; cursor: pointer;">Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function toggleTarefa(taskId, checkboxElement, cardElement) {
+            const isCurrentlyChecked = checkboxElement.classList.contains('checked');
+            const newStatus = isCurrentlyChecked ? 'pendente' : 'concluida';
+            
+            checkboxElement.style.pointerEvents = 'none';
+            checkboxElement.classList.toggle('checked');
+            cardElement.classList.toggle('completed');
+
+            try {
+                const response = await fetch(`/api/atualizar_tarefa/${taskId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (!response.ok) throw new Error('Falha ao salvar');
+                
+            } catch (error) {
+                checkboxElement.classList.toggle('checked');
+                cardElement.classList.toggle('completed');
+                alert('Erro ao atualizar. Verifique sua conexão.');
+            } finally {
+                checkboxElement.style.pointerEvents = 'auto';
+            }
+        }
+    </script>
 </body>
 </html>
